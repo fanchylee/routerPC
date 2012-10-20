@@ -1,0 +1,22 @@
+echo 1 > /proc/sys/net/ipv4/ip_forward
+for f in /proc/sys/net/ipv4/conf/*/rp_filter ; do 
+	echo 1 > $f ; 
+done
+
+iptables -F
+iptables -t nat -F
+iptables -I INPUT ! -i  eth0 -j ACCEPT
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -p tcp -i eth0 -j REJECT --reject-with tcp-reset
+iptables -A INPUT -p udp -i eth0 -j REJECT --reject-with icmp-port
+iptables -I FORWARD -i wlan0 -d 192.168.2.0/255.255.255.0 -j DROP
+iptables -A FORWARD -i wlan0 -s 192.168.2.0/255.255.255.0 -j ACCEPT
+iptables -A FORWARD -i eth0 -d 192.168.2.0/255.255.255.0 -j ACCEPT
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+
+hostapd /media/__ubuntu_11.10_/home/li3939108/hostapd.conf &
+ip addr add 192.168.2.1/24 dev wlan0
+/etc/init.d/isc-dhcp-server start
